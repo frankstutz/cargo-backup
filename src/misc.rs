@@ -24,7 +24,10 @@ pub(crate) fn execute_cmd(package: &Package, cmd_type: CommandType) {
         CommandType::Install => {
             args.push("install".to_string());
 
-            if let Some(ref path) = package.source_path {
+            if let Some(ref git_url) = package.git_url {
+                args.push("--git".to_string());
+                args.push(git_url.clone());
+            } else if let Some(ref path) = package.source_path {
                 args.push("--path".to_string());
                 args.push(path.clone());
             } else {

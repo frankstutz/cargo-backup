@@ -25,7 +25,16 @@
 			"no_default_features": true,
 			"profile": "release",
 			"target": null,
-			"bins": ["even-cool-thing"]
+			"bins": ["even-cooler-thing"]
+		},
+		"git-package 1.0.0 (git+https://github.com/user/repo#abc123)": {
+			"version_req": null,
+			"features": ["feature3"],
+			"all_features": false,
+			"no_default_features": false,
+			"profile": "release",
+			"target": null,
+			"bins": ["git-package"]
 		}
 	}
 }

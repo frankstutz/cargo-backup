@@ -21,6 +21,8 @@ pub struct Package {
     pub bins: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -80,11 +82,7 @@ pub fn get_packages() -> Vec<Package> {
     let mut packages = vec![];
 
     for (id, install) in crates.installs {
-        let (name, version, is_git, source_path) = slice_info(&id);
-
-        if is_git {
-            continue;
-        }
+        let (name, version, _is_git, source_path, git_url) = slice_info(&id);
 
         packages.push(Package {
             name: name.to_string(),
@@ -97,6 +95,7 @@ pub fn get_packages() -> Vec<Package> {
             version_req: install.version_req,
             bins: install.bins,
             source_path,
+            git_url,
         });
     }
 
@@ -199,13 +198,13 @@ fn check_bins_installed(bins: &[String]) -> bool {
 }
 
 /// Gets the Package name and Version from the string.
-/// Returns (name, version, is_git_package, source_path)
+/// Returns (name, version, is_git_package, source_path, git_url)
 ///
 /// # Examples
 /// ```no_run
-/// let (name, version, is_git, path) = slice_info("foo 0.1.0 (path+file:///home/user/foo)");
+/// let (name, version, is_git, path, git_url) = slice_info("foo 0.1.0 (path+file:///home/user/foo)");
 /// ```
-fn slice_info(package_str: &str) -> (String, Version, bool, Option<String>) {
+fn slice_info(package_str: &str) -> (String, Version, bool, Option<String>, Option<String>) {
     let splits: Vec<&str> = package_str.splitn(3, ' ').collect();
     let name = splits[0].to_string();
     let version = Version::parse(splits[1]).unwrap();
@@ -219,36 +218,52 @@ fn slice_info(package_str: &str) -> (String, Version, bool, Option<String>) {
         None
     };
 
-    (name, version, is_git_package, source_path)
+    let git_url = if is_git_package {
+        url.strip_prefix("git+").map(|s| s.to_string())
+    } else {
+        None
+    };
+
+    (name, version, is_git_package, source_path, git_url)
 }
 
 #[test]
 fn test_slice_info() {
     use std::str::FromStr;
 
-    let (name, version, is_git, path) = slice_info("foo 0.1.0 (path+file:///home/user/foo)");
+    let (name, version, is_git, path, git_url) = slice_info("foo 0.1.0 (path+file:///home/user/foo)");
     assert_eq!(name, "foo");
     assert_eq!(version, Version::from_str("0.1.0").unwrap());
     assert!(!is_git);
     assert_eq!(path, Some("/home/user/foo".to_string()));
+    assert_eq!(git_url, None);
 
-    let (name, version, is_git, path) = slice_info("foo 0.1.0 (registry+https://example.com/foo)");
+    let (name, version, is_git, path, git_url) = slice_info("foo 0.1.0 (registry+https://example.com/foo)");
     assert_eq!(name, "foo");
     assert_eq!(version, Version::from_str("0.1.0").unwrap());
     assert!(!is_git);
     assert_eq!(path, None);
+    assert_eq!(git_url, None);
 
-    let (name, version, is_git, path) = slice_info("foo 0.1.0 (git+https://github.com/foo/bar#hash)");
+    let (name, version, is_git, path, git_url) = slice_info("foo 0.1.0 (git+https://github.com/foo/bar#hash)");
     assert_eq!(name, "foo");
     assert_eq!(version, Version::from_str("0.1.0").unwrap());
     assert!(is_git);
     assert_eq!(path, None);
+    assert_eq!(git_url, Some("https://github.com/foo/bar#hash".to_string()));
+
+    let (name, version, is_git, path, git_url) = slice_info("foo 0.1.0 (git+ssh://git@github.com/foo/bar.git#hash)");
+    assert_eq!(name, "foo");
+    assert_eq!(version, Version::from_str("0.1.0").unwrap());
+    assert!(is_git);
+    assert_eq!(path, None);
+    assert_eq!(git_url, Some("ssh://git@github.com/foo/bar.git#hash".to_string()));
 }
 
 #[test]
 fn test_get_packages() {
     let packages = get_packages();
-    assert_eq!(packages.len(), 3);
+    assert_eq!(packages.len(), 4);
 }
 
 #[test]
@@ -265,6 +280,7 @@ fn test_install_packages() {
             version_req: None,
             bins: vec!["foo".to_string()],
             source_path: None,
+            git_url: None,
         },
         Package {
             name: "package".to_string(),
@@ -277,6 +293,7 @@ fn test_install_packages() {
             version_req: Some("=0.5.3".to_string()),
             bins: vec!["package".to_string(), "package-subcmd".to_string()],
             source_path: None,
+            git_url: None,
         },
     ];
 
