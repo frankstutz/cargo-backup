@@ -53,6 +53,13 @@ fn main() {
                                 .long("skip-remove")
                                 .help("Skip removal of Packages not found in the backup")
                                 .action(ArgAction::SetTrue),
+                        )
+                        .arg(
+                            Arg::new("yes")
+                                .short('y')
+                                .long("yes")
+                                .help("Skip confirmation prompt")
+                                .action(ArgAction::SetTrue),
                         ),
                 )
                 .subcommand(
@@ -78,6 +85,7 @@ fn main() {
                         args.get_flag("skip-install"),
                         args.get_flag("skip-update"),
                         args.get_flag("skip-remove"),
+                        args.get_flag("yes"),
                     )
                 }
                 Some(("push", _)) => {

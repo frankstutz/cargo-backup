@@ -23,10 +23,16 @@ pub(crate) fn execute_cmd(package: &Package, cmd_type: CommandType) {
 
         CommandType::Install => {
             args.push("install".to_string());
-            args.push(package.name.clone());
-            args.push("--version".to_string());
-            let version = package.version.to_string();
-            args.push(version);
+
+            if let Some(ref path) = package.source_path {
+                args.push("--path".to_string());
+                args.push(path.clone());
+            } else {
+                args.push(package.name.clone());
+                args.push("--version".to_string());
+                let version = package.version.to_string();
+                args.push(version);
+            }
 
             if package.all_features {
                 args.push("--all-features".to_string());
@@ -40,6 +46,14 @@ pub(crate) fn execute_cmd(package: &Package, cmd_type: CommandType) {
                 args.push("--features".to_string());
                 let features = package.features.join(",");
                 args.push(features);
+            }
+
+            args.push("--profile".to_string());
+            args.push(package.profile.clone());
+
+            if let Some(ref target) = package.target {
+                args.push("--target".to_string());
+                args.push(target.clone());
             }
         }
     }
