@@ -107,7 +107,7 @@ pub fn install_packages(
     skip_install: bool,
     skip_update: bool,
     skip_remove: bool,
-    yes: bool,
+    _yes: bool,
 ) {
     let installed_packages = get_packages();
 
@@ -165,7 +165,7 @@ pub fn install_packages(
         use crate::misc::{execute_cmd, CommandType};
         use dialoguer::Confirm;
 
-        if yes || Confirm::new().with_prompt("Proceed?").interact().ok().unwrap_or(false) {
+        if _yes || Confirm::new().with_prompt("Proceed?").interact().ok().unwrap_or(false) {
             // TODO: Install
 
             for package in to_install {
@@ -189,12 +189,31 @@ fn check_bins_installed(bins: &[String]) -> bool {
         return false;
     }
 
-    let cargo_bin_dir = dirs::home_dir().unwrap().join(".cargo/bin");
+    // Check for installation root in order of precedence:
+    // 1. CARGO_INSTALL_ROOT environment variable
+    // 2. CARGO_HOME environment variable
+    // 3. Default $HOME/.cargo
+    let cargo_install_root = std::env::var("CARGO_INSTALL_ROOT").ok();
 
-    bins.iter().all(|bin| {
-        let bin_path = cargo_bin_dir.join(bin);
-        bin_path.exists()
-    })
+    let cargo_home: Option<PathBuf> = match cargo_install_root {
+        Some(root) => Some(PathBuf::from(root)),
+        None => {
+            std::env::var("CARGO_HOME").ok()
+                .map(PathBuf::from)
+                .or_else(|| dirs::home_dir().map(|h| h.join(".cargo")))
+        }
+    };
+
+    if let Some(home) = cargo_home {
+        let cargo_bin_dir = home.join("bin");
+
+        bins.iter().all(|bin| {
+            let bin_path = cargo_bin_dir.join(bin);
+            bin_path.exists()
+        })
+    } else {
+        false
+    }
 }
 
 /// Gets the Package name and Version from the string.

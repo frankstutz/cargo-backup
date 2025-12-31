@@ -47,7 +47,12 @@ cargo restore --backup path/to/backup <args>
 * `--skip-remove | -r` - Skips the removal of packages not found in the backup.
 * `--yes | -y` - Skips the confirmation prompt.
 
-The restore command validates that binaries actually exist in `~/.cargo/bin/`. If binaries are missing for packages listed in `.crates2.json`, they will be marked for reinstallation.
+The restore command validates that binaries actually exist. It respects the following precedence for the cargo installation directory:
+1. `CARGO_INSTALL_ROOT` environment variable (highest)
+2. `CARGO_HOME` environment variable
+3. Default `~/.cargo/bin/`
+
+If binaries are missing for packages listed in `.crates2.json`, they will be marked for reinstallation.
 
 Path-based packages are reinstalled using `--path <directory>`. Registry packages use version-based installation. Git-based packages are reinstalled using `--git <url>`. 
 
